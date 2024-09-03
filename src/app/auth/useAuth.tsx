@@ -1,3 +1,4 @@
+//src/app/auth/useAuth.tsx
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthState } from "react-firebase-hooks/auth";

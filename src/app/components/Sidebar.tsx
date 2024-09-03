@@ -1,16 +1,15 @@
+// src/components/Sidebar.tsx
 'use client';
 
 import React from 'react';
 import SidebarRow from './SidebarRow';
 import logo from '/public/logo.png';
-
 import {
   UserPlusIcon,
   CurrencyDollarIcon,
   PresentationChartLineIcon,
   CircleStackIcon,
 } from '@heroicons/react/24/outline';
-
 import Image from 'next/image';
 
 interface SidebarProps {
@@ -21,7 +20,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPath }) => {
   return (
     <div className="flex flex-col justify-between max-w-[250px] xl:min-w-[250px] bg-gray-300">
       <div>
-        <div className="flex justify-center h-14 mb-8 sm:mb-12 shadow-md ">
+        <div className="flex justify-center h-14 mb-8 sm:mb-12 shadow-md">
           <Image
             src={logo}
             width={60}

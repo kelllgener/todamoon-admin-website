@@ -3,7 +3,7 @@ import QRCode from "qrcode";
 import CryptoJS from "crypto-js";
 import { auth, db, storage } from "@/app/firebase/config";
 import { createUserWithEmailAndPassword } from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore";
+import { doc, setDoc, runTransaction } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { FirebaseError } from "firebase/app";
 
@@ -24,6 +24,16 @@ const uploadFile = async (file: File, path: string) => {
   return downloadUrl;
 };
 
+const generateQRCode = async (uid: string, data: string) => {
+  const qrCodeUrl = await QRCode.toDataURL(data);
+  const qrCodeRef = ref(storage, `qrcodes/${uid}.png`);
+  const response = await fetch(qrCodeUrl);
+  const blob = await response.blob();
+  await uploadBytes(qrCodeRef, blob);
+  const downloadUrl = await getDownloadURL(qrCodeRef);
+  return downloadUrl;
+};
+
 const DriverRegistrationForm: React.FC = () => {
   const [firstName, setFirstName] = useState("");
   const [middleName, setMiddleName] = useState("");
@@ -35,8 +45,6 @@ const DriverRegistrationForm: React.FC = () => {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [plateImage, setPlateImage] = useState<File | null>(null);
-  const [plateImageUrl, setPlateImageUrl] = useState<string>("");
-  const [uid, setUid] = useState<string | null>(null);
 
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -57,84 +65,75 @@ const DriverRegistrationForm: React.FC = () => {
     }
   };
 
-  const generateQRCode = async (uid: string) => {
-    const qrData = `Name: ${firstName} ${middleName} ${lastName}\nTricycle Number: ${tricycleNumber}\nIn Queue: false`;
-    const qrCodeUrl = await QRCode.toDataURL(qrData);
-
-    // Upload QR code to Firebase Storage
-    const qrCodeRef = ref(storage, `qrcodes/${uid}.png`);
-    const response = await fetch(qrCodeUrl);
-    const blob = await response.blob();
-    await uploadBytes(qrCodeRef, blob);
-
-    const downloadUrl = await getDownloadURL(qrCodeRef);
-    return downloadUrl;
-  };
-
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const plateImageUrl = await uploadFile(file, `plate_images/${uid}.png`);
-      setPlateImageUrl(plateImageUrl);
+      setPlateImage(file);
     }
   };
 
   const handleSubmit = async () => {
-    // Validate if passwords match
     if (password !== confirmPassword) {
       setError("Passwords do not match.");
       return;
     }
 
     try {
-      // Hash the password
       const hashedPassword = hashPassword(password);
-
-      // Register user with Firebase Authentication
-      const userCredential = await createUserWithEmailAndPassword(
-        auth,
-        email,
-        hashedPassword
-      );
+      const userCredential = await createUserWithEmailAndPassword(auth, email, hashedPassword);
       const user = userCredential.user;
 
-      // Ensure user was created successfully
       if (!user) {
         throw new Error("User creation failed.");
       }
 
-      // Generate QR code
-      const qrCodeUrl = await generateQRCode(user.uid);
+      
 
-      // Handle profile image upload
-      const profileImageRef = ref(storage, `profile_images/${user.uid}.png`);
+      const qrData = `Name: ${firstName} ${middleName} ${lastName}\nTricycle Number: ${tricycleNumber}\nIn Queue: false`;
+      const encryptedQrData = encryptData(qrData, hashedPassword);
+      const qrCodeUrl = await generateQRCode(user.uid, qrData);
+
+      let plateImageUrl = "";
+      if (plateImage) {
+        plateImageUrl = await uploadFile(plateImage, `plate_images/${user.uid}.png`);
+      }
+
       const profileResponse = await fetch("/profile_user.png");
       const profileBlob = await profileResponse.blob();
-      await uploadBytes(profileImageRef, profileBlob);
-      const profileImageUrl = await getDownloadURL(profileImageRef);
+      const profileImageUrl = await uploadFile(new File([profileBlob], `${user.uid}.png`), `profile_images/${user.uid}.png`);
 
-      // Encrypt sensitive data
-      const encryptedTricycleNumber = encryptData(tricycleNumber, hashedPassword);
+      // Use Firestore transaction to ensure data integrity
+      await runTransaction(db, async (transaction) => {
+        const userRef = doc(db, "users", user.uid);
+        const barangayRef = doc(db, "barangays", barangay);
+        const driversInBarangayRef = doc(barangayRef, "drivers", user.uid);
 
-      // Save user data to Firestore
-      await setDoc(doc(db, "users", user.uid), {
-        uid: user.uid,
-        name: `${firstName} ${middleName} ${lastName}`,
-        barangay,
-        tricycleNumber: encryptedTricycleNumber, // Store encrypted tricycle number
-        email,
-        phoneNumber,
-        plateNumber: plateImageUrl, // Ensure plateImageUrl is set correctly
-        profileImage: profileImageUrl,
-        initialBalance: 580,
-        role: "Driver",
-        inQueue: true,
-        qrCodeUrl, // Save QR code URL
+        transaction.set(userRef, {
+          uid: user.uid,
+          name: `${firstName} ${middleName} ${lastName}`,
+          barangay,
+          tricycleNumber: tricycleNumber,
+          email,
+          phoneNumber,
+          plateNumber: plateImageUrl,
+          profileImage: profileImageUrl,
+          balance: 500,
+          role: "Driver",
+          inQueue: false,
+          qrCodeUrl,
+        });
+
+        const driverInfo = {
+          Name: `${firstName} ${middleName} ${lastName}`,
+          TricycleNumber: tricycleNumber,
+          inQueue: true,
+        };
+
+        transaction.set(driversInBarangayRef, driverInfo);
       });
 
       setSuccess("Registration successful.");
     } catch (error) {
-      // Type guard for Firebase Authentication error
       if (error instanceof FirebaseError) {
         switch (error.code) {
           case "auth/email-already-in-use":
@@ -152,12 +151,12 @@ const DriverRegistrationForm: React.FC = () => {
             break;
         }
       } else {
-        // Handle other types of errors
         console.error("Unexpected error: ", error);
         setError("An unexpected error occurred.");
       }
     }
   };
+
   return (
     <form
       className="max-w-4xl mx-auto bg-base-100 shadow-lg rounded-lg p-8 sm:p-6 xs:p-4"
@@ -352,7 +351,7 @@ const DriverRegistrationForm: React.FC = () => {
           type="button"
           onClick={handleSubmit}
         >
-          Signup
+          Register Driver
         </button>
       </div>
     </form>
