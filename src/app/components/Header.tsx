@@ -1,15 +1,15 @@
 // src/app/components/Header.tsx
-'use client'; // Ensure this is at the top
+"use client"; // Ensure this is at the top
 
-import React from 'react';
-import { usePathname, useRouter } from 'next/navigation';
-import { signOut } from 'firebase/auth';
-import { auth } from '@/app/firebase/config';
-import { ChevronDownIcon } from '@heroicons/react/24/outline';
-import { useUser } from '@/app/auth/UserContext';
+import React from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { signOut } from "firebase/auth";
+import { auth } from "@/app/firebase/config";
+import { ChevronDownIcon } from "@heroicons/react/24/outline";
 
 interface HeaderProps {
   userEmail: string;
+  userRole: string;
 }
 
 const routeTitles: { [key: string]: string } = {
@@ -20,7 +20,7 @@ const routeTitles: { [key: string]: string } = {
   "/logout": "Logout",
 };
 
-const Header: React.FC<HeaderProps> = ({ userEmail }) => {
+const Header: React.FC<HeaderProps> = ({ userEmail, userRole }) => {
   const pathname = usePathname();
   const router = useRouter();
   const title = routeTitles[pathname] || "Dashboard";
@@ -35,10 +35,18 @@ const Header: React.FC<HeaderProps> = ({ userEmail }) => {
       <h1 className="ml-2 font-bold">{title}</h1>
       <div>
         <div className="dropdown dropdown-end bg-transparent">
-          <div className="flex items-center m-1 text-gray-900" tabIndex={0} role="button">
-            <span className="mr-2">{userEmail}</span>
-            <ChevronDownIcon className="h-4 w-4" />
+          <div
+            className="text-sm flex flex-col items-start text-gray-900"
+            tabIndex={0}
+            role="button"
+          >
+            <div className="flex flex-row">
+              <span className="">{userEmail}</span>
+              <ChevronDownIcon className="h-4 w-4 mt-1 mr-2" />
+            </div>
+            <span className="text-xs text-gray-600">{userRole}</span>
           </div>
+
           <ul
             tabIndex={1}
             className="dropdown-content menu bg-base-100 rounded-box z-[1] w-52 p-2 shadow"

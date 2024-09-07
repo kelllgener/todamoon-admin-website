@@ -1,16 +1,17 @@
 // src/components/Sidebar.tsx
-'use client';
+"use client";
 
-import React from 'react';
-import SidebarRow from './SidebarRow';
-import logo from '/public/logo.png';
+import React from "react";
+import SidebarRow from "./SidebarRow";
+import logo from "/public/logo.png";
 import {
   UserPlusIcon,
   CurrencyDollarIcon,
   PresentationChartLineIcon,
   CircleStackIcon,
-} from '@heroicons/react/24/outline';
-import Image from 'next/image';
+  CreditCardIcon
+} from "@heroicons/react/24/outline";
+import Image from "next/image";
 
 interface SidebarProps {
   currentPath: string;
@@ -37,10 +38,16 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPath }) => {
             active={currentPath === "/dashboard"}
           />
           <SidebarRow
-            Icon={CurrencyDollarIcon}
+            Icon={CreditCardIcon}
             title="Recharge Balance"
             href="/recharge-balance"
             active={currentPath === "/recharge-balance"}
+          />
+          <SidebarRow
+            Icon={CurrencyDollarIcon}
+            title="Terminal-Fee"
+            href="/terminal-fee"
+            active={currentPath === "/terminal-fee"}
           />
           <SidebarRow
             Icon={UserPlusIcon}

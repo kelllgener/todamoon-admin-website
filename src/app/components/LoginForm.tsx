@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { useSignInWithEmailAndPassword } from 'react-firebase-hooks/auth';
 import { auth } from '@/app/firebase/config';
+import { getFirestore, doc, updateDoc } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 
 const LoginForm: React.FC = () => {
@@ -15,10 +16,20 @@ const LoginForm: React.FC = () => {
     try {
       const res = await signInWithEmailAndPassword(email, password);
       if (res) {
-        console.log('User logged in:', res);
+        const { user: firebaseUser } = res;
+        console.log('User logged in:', firebaseUser);
+
+        // Update the last sign-in time in Firestore
+        const firestore = getFirestore();
+        const userDocRef = doc(firestore, 'website-users', firebaseUser.uid);
+        await updateDoc(userDocRef, {
+          lastSignInTime: firebaseUser.metadata.lastSignInTime
+        });
+
         router.push('/dashboard'); // Redirect to dashboard or any other page after login
       }
     } catch (e: any) {
+      // Generic error message
       console.error('Error during login:', e.message);
     }
   };
@@ -30,7 +41,7 @@ const LoginForm: React.FC = () => {
           {error && (
             <div className="alert alert-error mb-4">
               <div>
-                <span>{"Incorrect credentials. Please check your email and password."}</span>
+                <span>{"Incorrect email or password. Please try again."}</span>
               </div>
             </div>
           )}
@@ -83,7 +94,7 @@ const LoginForm: React.FC = () => {
 
             <button
               type="submit"
-              className="btn btn-active btn-sm btn-secondary w-full mt-2"
+              className="btn btn-active btn-sm btn-neutral w-full mt-2"
               disabled={loading}
             >
               {loading ? 'Logging in...' : 'Login'}

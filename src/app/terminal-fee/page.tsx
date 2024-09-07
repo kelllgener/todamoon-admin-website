@@ -5,15 +5,18 @@ import Sidebar from "../components/Sidebar";
 import Footer from "../components/Footer";
 import { useAuth } from "@/app/auth/useAuth";
 import { usePathname } from "next/navigation"; // Or useRouter if working
-import DriverRegistrationForm from "../components/DriverRegistrationForm";
 import Loading from "../components/Loading";
 
-const RegisterDriver = () => {
-  const { user, loading, userData } = useAuth();
-  const pathname = usePathname();
 
-  if (loading) return <Loading />; // Render loading state
-  if (!user) return null; // Render nothing if not authenticated
+import UpdateTerminalFeeForm from '../components/UpdateTerminalFeeForm'
+
+const TerminalFee = () => {
+
+    const { user, loading, userData } = useAuth();
+    const pathname = usePathname();
+  
+    if (loading) return <Loading />; // Render loading state
+    if (!user) return null; // Render nothing if not authenticated
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -25,14 +28,14 @@ const RegisterDriver = () => {
             userRole={userData?.role || "Guest"}
           />
           <div className="flex flex-col flex-grow border-2 p-6">
-            <DriverRegistrationForm />
+          <UpdateTerminalFeeForm />
           </div>
         </div>
       </div>
 
       <Footer />
     </div>
-  );
-};
+  )
+}
 
-export default RegisterDriver;
+export default TerminalFee

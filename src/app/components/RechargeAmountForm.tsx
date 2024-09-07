@@ -102,8 +102,8 @@ const RechargeAmountForm = () => {
       </div>
 
       <div className="flex items-center justify-center">
-        <button className="btn btn-sm btn-primary w-full max-w-xs" type="submit">
-          Submit
+        <button className="btn btn-sm btn-neutral w-full max-w-xs" type="submit">
+          Recharge
         </button>
       </div>
     </form>
