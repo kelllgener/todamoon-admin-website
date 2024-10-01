@@ -1,8 +1,5 @@
 "use client";
 import { useState } from "react";
-import { useCreateUserWithEmailAndPassword } from "react-firebase-hooks/auth";
-import { auth, db } from "@/app/firebase/config";
-import { doc, setDoc } from "firebase/firestore";
 import Loading from "../components/Loading"; // Import the Loading component
 
 const SignUpForm = () => {
@@ -13,9 +10,6 @@ const SignUpForm = () => {
   const [success, setSuccess] = useState<string | null>(null); // Add success state
   const [loading, setLoading] = useState<boolean>(false); // Add loading state
   const [role, setRole] = useState<string>("ADMINISTRATOR"); // Add role state
-
-  const [createUserWithEmailAndPassword] =
-    useCreateUserWithEmailAndPassword(auth);
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,64 +24,35 @@ const SignUpForm = () => {
     setSuccess(null); // Clear previous success messages
 
     try {
-      const userCredential = await createUserWithEmailAndPassword(
-        email,
-        password
-      );
-
-      if (!userCredential) {
-        throw new Error("Failed to create user");
-      }
-
-      const user = userCredential.user;
-
-      // Add user data to Firestore
-      await setDoc(doc(db, "website-users", user.uid), {
-        email: user.email,
-        uid: user.uid,
-        createdAt: new Date().toISOString(),
-        role: role, // Add role to Firestore document
+      // Make a POST request to the signup API
+      const response = await fetch('/api/WebsiteUser/addWebsiteUser', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password, role }),
       });
 
-      console.log(
-        "User created and added to Firestore successfully:",
-        userCredential
-      );
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to sign up');
+      }
+
       setEmail("");
       setPassword("");
       setConfirmPassword("");
       setSuccess("Signup successful! Welcome to TODAMOON."); // Set success message
     } catch (e: any) {
       console.error("Error during sign-up:", e.message);
-
-      // Handle specific Firebase Auth errors
-      switch (e.code) {
-        case "auth/email-already-in-use":
-          setError("Email is already in use. Please use a different email.");
-          break;
-        case "auth/invalid-email":
-          setError("Invalid email format. Please enter a valid email address.");
-          break;
-        case "auth/weak-password":
-          setError("Password is too weak. Please choose a stronger password.");
-          break;
-        case "auth/missing-email":
-          setError("Email is required.");
-          break;
-        case "auth/missing-password":
-          setError("Password is required.");
-          break;
-        default:
-          setError("An error occurred during sign-up. Please try again.");
-          break;
-      }
+      setError(e.message || "An error occurred during sign-up. Please try again.");
     } finally {
       setLoading(false); // Set loading to false when registration completes
     }
   };
 
   return (
-    <div className="flex justify-center items-center h-screen bg-gray-100">
+    <div className="flex justify-center items-center bg-gray-100">
       <div className="w-full max-w-sm p-8 bg-white rounded-lg shadow-md">
         <>
           {error && (
@@ -112,10 +77,7 @@ const SignUpForm = () => {
           ) : (
             <form onSubmit={handleSignup}>
               <div className="mb-4">
-                <label
-                  className="block mb-2 text-sm text-gray-700"
-                  htmlFor="email"
-                >
+                <label className="block mb-2 text-sm text-gray-700" htmlFor="email">
                   Email
                 </label>
                 <input
@@ -128,10 +90,21 @@ const SignUpForm = () => {
                 />
               </div>
               <div className="mb-4">
-                <label
-                  className="block mb-2 text-sm text-gray-700"
-                  htmlFor="password"
+                <label className="block mb-2 text-sm text-gray-700" htmlFor="role">
+                  Role
+                </label>
+                <select
+                  id="role"
+                  className="select select-bordered w-full select-sm"
+                  value={role}
+                  onChange={(e) => setRole(e.target.value)}
                 >
+                  <option value="ADMINISTRATOR">ADMINISTRATOR</option>
+                  <option value="COLLECTOR">COLLECTOR</option>
+                </select>
+              </div>
+              <div className="mb-4">
+                <label className="block mb-2 text-sm text-gray-700" htmlFor="password">
                   Password
                 </label>
                 <input
@@ -144,10 +117,7 @@ const SignUpForm = () => {
                 />
               </div>
               <div className="mb-6">
-                <label
-                  className="block mb-2 text-sm text-gray-700"
-                  htmlFor="confirmPassword"
-                >
+                <label className="block mb-2 text-sm text-gray-700" htmlFor="confirmPassword">
                   Confirm Password
                 </label>
                 <input

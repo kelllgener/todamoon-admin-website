@@ -1,9 +1,8 @@
 import { NextResponse } from 'next/server';
 import { initAdmin } from '@/app/firebase/firebaseAdmin';
-import { uploadFile } from '@/app/utils/uploadFile'; // Adjust path as necessary
 
 export async function PUT(request: Request) {
-  const { uid, firstName, middleName, lastName, phoneNumber, plateImage, profileImage } = await request.json();
+  const { uid, name, inQueue, phoneNumber, tricycleNumber, barangay, currentBarangay, newBarangay } = await request.json();
 
   if (!uid) {
     return NextResponse.json({ error: "UID is required" }, { status: 400 });
@@ -12,31 +11,40 @@ export async function PUT(request: Request) {
   try {
     const adminApp = await initAdmin();
     const firestore = adminApp.firestore();
-    const bucket = adminApp.storage().bucket();
 
     const userRef = firestore.collection('users').doc(uid);
 
+    const currentBarangayRef = firestore.collection('barangays').doc(currentBarangay)
+      .collection('drivers').doc(uid);
+    await currentBarangayRef.delete();
+
     const updates: any = {};
-    if (firstName || middleName || lastName) {
-      updates.name = `${firstName} ${middleName} ${lastName}`;
+    if(name) {
+      updates.name = name;
     }
     if (phoneNumber) {
       updates.phoneNumber = phoneNumber;
     }
-
-    // Handle profile image update
-    if (profileImage) {
-      const profileImageUrl = await uploadFile(profileImage, `profile_images/${uid}.png`, bucket);
-      updates.profileImage = profileImageUrl;
+    if(tricycleNumber) {
+      updates.tricycleNumber = tricycleNumber;
     }
-
-    // Handle plate image update
-    if (plateImage) {
-      const plateImageUrl = await uploadFile(plateImage, `plate_images/${uid}.png`, bucket);
-      updates.plateNumber = plateImageUrl;
+    if(barangay) {
+      updates.barangay = barangay;
     }
 
     await userRef.update(updates);
+
+    const newBarangayRef = firestore.collection('barangays').doc(newBarangay)
+      .collection('drivers').doc(uid);
+
+    const driverData = {
+      name,
+      inQueue,
+      uid,
+      tricycleNumber
+    };
+
+    await newBarangayRef.set(driverData);
 
     return NextResponse.json({ success: "User updated successfully" });
   } catch (error) {

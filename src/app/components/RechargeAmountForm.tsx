@@ -1,6 +1,15 @@
 import React, { useState } from "react";
 import { db } from '@/app/firebase/config'; // Adjust the path to your config
-import { collection, query, where, getDocs, updateDoc, doc } from "firebase/firestore";
+import {
+  collection,
+  query,
+  where,
+  getDocs,
+  updateDoc,
+  doc,
+  addDoc,
+  serverTimestamp,
+} from 'firebase/firestore';
 
 const RechargeAmountForm = () => {
   const [email, setEmail] = useState("");
@@ -12,18 +21,18 @@ const RechargeAmountForm = () => {
     e.preventDefault();
     setError("");
     setSuccess("");
-
+  
     if (!email || !amount) {
       setError("Please fill in all fields.");
       return;
     }
-
+  
     const rechargeAmount = parseFloat(amount);
     if (rechargeAmount <= 0) {
       setError("Amount must be greater than zero.");
       return;
     }
-
+  
     try {
       const usersRef = collection(db, "users");
       const q = query(
@@ -32,20 +41,49 @@ const RechargeAmountForm = () => {
         where("role", "==", "Driver")
       );
       const querySnapshot = await getDocs(q);
-
+  
       if (querySnapshot.empty) {
         setError("Driver not found.");
         return;
       }
-
+  
       querySnapshot.forEach(async (userDoc) => {
         const userData = userDoc.data();
         const newBalance = (userData.balance || 0) + rechargeAmount;
-
+  
+        // Update user balance
         await updateDoc(doc(db, "users", userDoc.id), { balance: newBalance });
+  
+        // Add transaction record
+        const transactionData = {
+          amount: rechargeAmount,
+          timestamp: serverTimestamp(),
+          description: "Balance Recharge",
+        };
+  
+        await addDoc(
+          collection(doc(db, "users", userDoc.id), "billing-transactions"),
+          transactionData
+        );
+
+
+        const billing_records_ref = collection(db, "billing_records");
+
+        // Add transaction record
+        const billingRecordsData = {
+          amount: rechargeAmount,
+          timestamp: serverTimestamp(),
+          description: "Balance Recharge",
+          email: userData.email,
+          name :userData.name,
+          uid: userDoc.id,
+        };
+
+        await addDoc(billing_records_ref, billingRecordsData);
+  
         setSuccess(`Balance updated successfully. New balance: ${newBalance}`);
       });
-
+  
       setEmail("");
       setAmount("");
     } catch (err) {
@@ -53,6 +91,7 @@ const RechargeAmountForm = () => {
       setError("An error occurred while updating the balance.");
     }
   };
+  
 
   return (
     <form className="max-w-4xl mx-auto bg-base-100 shadow-lg rounded-lg p-8" onSubmit={handleFormSubmit}>

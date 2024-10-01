@@ -2,7 +2,12 @@ import { useState, useEffect } from "react";
 import Swal from "sweetalert2";
 import Loading from "./Loading";
 import ActionButtons from "./ActionButtons";
-import { TrashIcon, PencilSquareIcon } from "@heroicons/react/24/outline";
+import {
+  TrashIcon,
+  PencilSquareIcon,
+  UserPlusIcon,
+} from "@heroicons/react/24/outline";
+import Link from "next/link";
 
 interface User {
   uid: string;
@@ -51,7 +56,7 @@ const WebsiteUserDatabase = () => {
   const handleDelete = async (uid: string) => {
     setLoading(true);
     try {
-      const response = await fetch("/api/deleteUser", {
+      const response = await fetch("/api/WebsiteUser/deleteWebsiteUser", {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json",
@@ -127,11 +132,18 @@ const WebsiteUserDatabase = () => {
       {loading ? (
         <Loading /> // Show Loading component while processing
       ) : (
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto ">
+          <div className="flex flex-row flex-grow justify-end">
+            <Link className="flex flex-row btn btn-neutral btn-sm mb-4" 
+            href={"/signup"}>
+              <UserPlusIcon height={"20px"} /> Add User
+            </Link>
+          </div>
+
           <table className="table table-xs table-zebra w-full">
             <thead>
               <tr>
-                <th></th>
+                <th>#</th>
                 <th>UID</th>
                 <th>Email</th>
                 <th>Created At</th>
@@ -163,7 +175,7 @@ const WebsiteUserDatabase = () => {
               ))}
             </tbody>
           </table>
-          <div className="flex justify-end mt-12">
+          <div className="flex justify-start mt-12">
             <div className="btn-group">
               <button
                 className="btn btn-square btn-sm"

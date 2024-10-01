@@ -19,7 +19,7 @@ const SidebarRow: React.FC<Props> = ({ src, Icon, title, href, active }) => {
         }`}
       >
         {Icon && <Icon className="h-6 w-6 text-gray-700" />}
-        <p className="hidden sm:inline-flex font-normal">{title}</p>
+        <p className="hidden md:inline-flex font-normal">{title}</p>
       </div>
     </Link>
   );

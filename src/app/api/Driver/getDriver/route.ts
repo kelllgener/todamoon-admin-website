@@ -15,7 +15,16 @@ export async function GET(request: Request) {
       if (!userDoc.exists) {
         return NextResponse.json({ error: "User not found" }, { status: 404 });
       }
-      return NextResponse.json({ data: userDoc.data() });
+
+      const userData = userDoc.data();
+      // Check if URLs are included, and make sure they're correctly formatted
+      const responseData = {
+        ...userData,
+        profileImage: userData?.profileImage || null,
+        plateNumber: userData?.plateNumber || null
+      };
+
+      return NextResponse.json({ data: responseData });
     }
 
     // If no UID, fetch all users with role = "Driver"
@@ -24,7 +33,15 @@ export async function GET(request: Request) {
       .where('role', '==', 'Driver')
       .get();
 
-    const users = usersSnapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() }));
+    const users = usersSnapshot.docs.map(doc => {
+      const userData = doc.data();
+      return {
+        uid: doc.id,
+        ...userData,
+        profileImage: userData.profileImage || null,
+        plateNumber: userData.plateNumber || null
+      };
+    });
 
     return NextResponse.json({ data: users });
   } catch (error) {

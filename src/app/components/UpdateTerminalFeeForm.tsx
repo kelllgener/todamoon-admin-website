@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { db } from "@/app/firebase/config"; // Adjust the path to your config
-import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc, Timestamp } from "firebase/firestore";
 import Loading from "../components/Loading"; // Import the Loading component
 
 const UpdateTerminalFee = () => {
@@ -13,7 +13,7 @@ const UpdateTerminalFee = () => {
   useEffect(() => {
     let fetchCurrentFee = async () => {
       try {
-        const docRef = doc(db, "terminal-fee", "current-terminal-fee");
+        const docRef = doc(db, "dashboard-counts", "terminal-fee");
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
           setCurrentFee(docSnap.data().fee || ""); // Adjust 'fee' to match your document field
@@ -48,9 +48,13 @@ const UpdateTerminalFee = () => {
     }
 
     try {
-      const docRef = doc(db, "terminal-fee", "current-terminal-fee");
+      const docRef = doc(db, "dashboard-counts", "terminal-fee");
 
-      await updateDoc(docRef, { fee: newFee }); // Adjust 'fee' to match your document field
+      // Update the document with the new fee and current timestamp
+      await updateDoc(docRef, {
+        fee: newFee,
+        lastUpdated: Timestamp.fromDate(new Date()), // Use Firestore Timestamp from JavaScript Date
+      });
       setSuccess(`Fee updated successfully. New fee: ${newFee}`);
       setAmount("");
     } catch (err) {
@@ -74,13 +78,17 @@ const UpdateTerminalFee = () => {
           <span>{success}</span>
         </div>
       )}
+
       {loading ? (
         <Loading /> // Show Loading component while processing
       ) : (
-        <form className="" onSubmit={handleFormSubmit}>
+        <form
+          className="grid grid-cols-1 gap-6 mb-6"
+          onSubmit={handleFormSubmit}
+        >
           <h2 className="text-3xl font-bold mb-6 text-center sm:text-2xl xs:text-xl">
             TODAMOON Terminal Fee{" "}
-            <span className="badge badge-success">in PESO</span>{" "}
+            <span className="badge badge-success">in PESO</span>
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
@@ -97,6 +105,7 @@ const UpdateTerminalFee = () => {
                 disabled
               />
             </div>
+
             <div>
               <label className="label" htmlFor="amount">
                 <span className="label-text">New Fee</span>

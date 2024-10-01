@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Header from "../components/Header";
 import Sidebar from "../components/Sidebar";
 import Footer from "../components/Footer";
@@ -8,26 +8,53 @@ import { useAuth } from "@/app/auth/useAuth";
 import { usePathname } from "next/navigation";
 import Loading from "../components/Loading";
 
-const Dashboard = () => {
-  const { user, loading, userData } = useAuth(); // Use the useAuth hook
-  const pathname = usePathname();
+import Overview from "../components/dashboardComponent/Overview";
+import RecentActivity from "../components/dashboardComponent/RecentActivity";
+import GrowChart from "../components/dashboardComponent/GrowChart";
 
-  if (loading) return <Loading />; // Render loading state
-  if (!user) return null; // Render nothing if not authenticated
+const Dashboard = () => {
+  const { user, loading, userData } = useAuth();
+  const pathname = usePathname();
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  const toggleSidebar = () => {
+    setIsSidebarOpen(!isSidebarOpen);
+  };
+
+  if (loading) return <Loading />;
+  if (!user) return null;
 
   return (
     <div className="flex flex-col min-h-screen">
-      <div className="flex flex-row flex-grow">
-        <Sidebar currentPath={pathname} />
-        <div className="flex flex-col flex-grow">
-          <Header
-            userEmail={userData?.email || "User"}
-            userRole={userData?.role || "Guest"} // Access role from userData
-          />
-          <div className="flex flex-col flex-grow border-2 p-6">
-            <p>Dashboard</p>
+      <Header
+        userEmail={userData?.email || "User"}
+        userRole={userData?.role || "Guest"}
+        toggleSidebar={toggleSidebar}
+        isSidebarOpen={isSidebarOpen}
+      />
+      <div className="flex flex-grow">
+        <Sidebar
+          currentPath={pathname}
+          isSidebarOpen={isSidebarOpen}
+          toggleSidebar={toggleSidebar}
+          userRole={userData?.role || "GUEST"} // Pass the user role here
+        />
+        <main className="flex flex-col flex-grow p-6 space-y-6">
+          {/* Grid setup for 2 top items and RecentActivity at the bottom */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 grid-rows-[auto,auto,1fr] gap-6 h-full">
+            {/* Overview and GrowChart on the top row */}
+            <div className="lg:col-span-1">
+              <Overview />
+            </div>
+            <div className="lg:col-span-2">
+              <GrowChart />
+            </div>
+            {/* Recent Activity taking full bottom row */}
+            <div className="lg:col-span-3 row-span-1">
+              <RecentActivity />
+            </div>
           </div>
-        </div>
+        </main>
       </div>
       <Footer />
     </div>

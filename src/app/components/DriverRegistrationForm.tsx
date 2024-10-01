@@ -9,10 +9,10 @@ const DriverRegistrationForm: React.FC = () => {
   const [tricycleNumber, setTricycleNumber] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [email, setEmail] = useState("");
+  const [plateNumberText, setPlateNumberText] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [plateImage, setPlateImage] = useState<File | null>(null);
-
   const [fileInputKey, setFileInputKey] = useState(0);
 
   const [error, setError] = useState("");
@@ -36,6 +36,7 @@ const DriverRegistrationForm: React.FC = () => {
     setBarangay("");
     setTricycleNumber("");
     setPhoneNumber("");
+    setPlateNumberText("");
     setEmail("");
     setPassword("");
     setConfirmPassword("");
@@ -92,6 +93,7 @@ const DriverRegistrationForm: React.FC = () => {
           lastName,
           barangay,
           tricycleNumber,
+          plateNumberText,
           phoneNumber,
           plateImage: plateImageBase64,
         }),
@@ -233,19 +235,21 @@ const DriverRegistrationForm: React.FC = () => {
             </div>
 
             <div>
-              <label className="label" htmlFor="plateNumber">
-                <span className="label-text">Plate Number (Image Only)</span>
+              <label className="label" htmlFor="plateNumberText">
+                <span className="label-text">Plate Number (Text Only)</span>
               </label>
               <input
-                className="file-input file-input-sm file-input-bordered w-full"
-                id="plateNumber"
-                type="file"
-                accept="image/*"
-                key={fileInputKey}
+                className="input input-sm input-bordered w-full"
+                id="plateNumberText"
+                type="text"
+                placeholder="Plate Number"
+                value={plateNumberText}
+                onChange={(e) => setPlateNumberText(e.target.value)}
                 required
-                onChange={handleFileChange}
+                maxLength={15} 
               />
             </div>
+
             <div>
               <label className="label" htmlFor="tricycleNumber">
                 <span className="label-text">
@@ -263,6 +267,21 @@ const DriverRegistrationForm: React.FC = () => {
                 required
               />
             </div>
+
+            <div>
+              <label className="label" htmlFor="plateNumber">
+                <span className="label-text">Plate Number (Image Only)</span>
+              </label>
+              <input
+                className="file-input file-input-sm file-input-bordered w-full"
+                id="plateNumber"
+                type="file"
+                accept="image/*"
+                key={fileInputKey}
+                onChange={handleFileChange}
+              />
+            </div>
+            
           </div>
 
           <h3 className="text-lg font-semibold mb-4">Account Details</h3>

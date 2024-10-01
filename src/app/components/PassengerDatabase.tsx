@@ -3,16 +3,14 @@ import Swal from "sweetalert2";
 import Loading from "./Loading";
 import ActionButtons from "./ActionButtons";
 import { TrashIcon, PencilSquareIcon } from "@heroicons/react/24/outline";
+import Modal from "./Modal";
 
 interface User {
   uid: string;
   name: string;
   email: string;
-  phoneNumber: string;
-  barangay: string;
-  balance: number;
   role: string;
-  tricycleNumber: string;
+  profileImage?: string;
 }
 
 const ITEMS_PER_PAGE = 10;
@@ -23,6 +21,7 @@ const PassengerDatabase = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -45,15 +44,10 @@ const PassengerDatabase = () => {
     fetchUsers();
   }, []);
 
-  const handleUpdate = (uid: string) => {
-    // Add update logic here
-    console.log(`Updating user with UID: ${uid}`);
-  };
-
   const handleDelete = async (uid: string) => {
     setLoading(true);
     try {
-      const response = await fetch("/api/deleteUser", {
+      const response = await fetch("/api/Passenger/deletePassenger", {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json",
@@ -105,6 +99,14 @@ const PassengerDatabase = () => {
     });
   };
 
+  const handleImageClick = (imageUrl: string) => {
+    setSelectedImage(imageUrl);
+  };
+
+  const closeModal = () => {
+    setSelectedImage(null);
+  };
+
   if (loading) {
     return <Loading />;
   }
@@ -128,15 +130,13 @@ const PassengerDatabase = () => {
 
   return (
     <div>
-      {loading ? (
-        <Loading /> // Show Loading component while processing
-      ) : (
         <div className="overflow-x-auto">
           <table className="table table-xs table-zebra w-full">
             <thead>
               <tr>
-                <th></th>
+                <th>#</th>
                 <th>UID</th>
+                <th>Profile</th>
                 <th>Name</th>
                 <th>Email</th>
                 <th>Action</th>
@@ -147,6 +147,19 @@ const PassengerDatabase = () => {
                 <tr key={user.uid}>
                   <td>{startIndex + index + 1}</td>
                   <td>{user.uid}</td>
+                  <td>
+                  {user.profileImage ? (
+                    <img
+                      src={user.profileImage}
+                      alt="Profile"
+                      className="w-8 h-8 object-cover cursor-pointer rounded-full"
+                      onClick={() => handleImageClick(user.profileImage || '/default-profile.png')}
+                      style={{ maxWidth: '100%', height: 'auto' }}
+                    />
+                  ) : (
+                    <span>No Image</span>
+                  )}
+                </td>
                   <td>{user.name}</td>
                   <td>{user.email}</td>
                   <td className="whitespace-nowrap">
@@ -163,7 +176,7 @@ const PassengerDatabase = () => {
               ))}
             </tbody>
           </table>
-          <div className="flex justify-end mt-12">
+          <div className="flex justify-start mt-12">
             <div className="btn-group">
               <button
                 className="btn btn-square btn-sm"
@@ -195,6 +208,8 @@ const PassengerDatabase = () => {
             </div>
           </div>
         </div>
+        {selectedImage && (
+        <Modal imageUrl={selectedImage} onClose={closeModal} />
       )}
     </div>
   );

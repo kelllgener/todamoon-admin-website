@@ -4,82 +4,60 @@ import QRCode from 'qrcode';
 import { Buffer } from 'buffer';
 import { readFileSync } from 'fs';
 import path from 'path';
+import { encrypt } from "@/app/utils/crypto";
 
-import { hashPassword } from "@/app/utils/hash";
+const SECRET_KEY = "Todamoon_drivers";
 
 export async function POST(request: Request) {
-  const { email, password, firstName, middleName, lastName, barangay, tricycleNumber, phoneNumber, plateImage, profileImage } = await request.json();
+  const { email, password, firstName, middleName, lastName, barangay, tricycleNumber, phoneNumber, plateImage, plateNumberText, profileImage } = await request.json();
 
   try {
     const adminApp = await initAdmin();
-    const auth = adminApp.auth();
     const firestore = adminApp.firestore();
     const bucket = adminApp.storage().bucket(); // Automatically use the default storage bucket
 
-    const hashedPassword = hashPassword(password);
+    // First upload plate image, then profile image, and save URLs
+    let plateImageUrl = '';
+    let profileImageUrl = '';
 
-    // Create the user
+    // Check if plate image is provided
+    plateImageUrl = plateImage 
+      ? await uploadFile(plateImage, `plate_images/temp_${Date.now()}.png`, bucket)
+      : null; // Or assign a default value if necessary
+
+    // Proceed with profile image upload if provided, else use default or skip
+    profileImageUrl = profileImage 
+      ? await uploadFile(profileImage, `profile_images/temp_${Date.now()}.png`, bucket)
+      : await uploadDefaultProfileImage('temp', bucket); // Or skip this step if not necessary
+
+    // Create the user only after successful uploads and Firestore transaction
+    const auth = adminApp.auth();
     const userRecord = await auth.createUser({
       email,
-      password: hashedPassword,
+      password,
     });
 
-    // Generate QR code URL
-    const qrData = `Name: ${firstName} ${middleName} ${lastName}\nTricycle Number: ${tricycleNumber}\nIn Queue: false`;
-    const qrCodeUrl = await generateQRCode(userRecord.uid, qrData, bucket);
-
-    // Handle plate image upload
-    let plateImageUrl = '';
-    if (plateImage) {
-      plateImageUrl = await uploadFile(plateImage, `plate_images/${userRecord.uid}.png`, bucket);
-    }
-
-    // Handle profile image upload
-    let profileImageUrl = '';
-    if (profileImage) {
-      profileImageUrl = await uploadFile(profileImage, `profile_images/${userRecord.uid}.png`, bucket);
-    } else {
-      // If no profile image is provided, upload the default 'profile_user.png' from the public directory
-      profileImageUrl = await uploadProfileImage(bucket, userRecord.uid);
-    }
-
-    // Save user data to Firestore
-    await firestore.runTransaction(async (transaction) => {
-      const userRef = firestore.collection('users').doc(userRecord.uid);
-      const barangayRef = firestore.collection('barangays').doc(barangay);
-      const driversInBarangayRef = barangayRef.collection('drivers').doc(userRecord.uid);
-
-      transaction.set(userRef, {
-        uid: userRecord.uid,
-        name: `${firstName} ${middleName} ${lastName}`,
-        barangay,
-        tricycleNumber,
-        email,
-        phoneNumber,
-        plateNumber: plateImageUrl,
-        profileImage: profileImageUrl, // Updated to include the uploaded profile image
-        balance: 500,
-        role: 'Driver',
-        inQueue: false,
-        qrCodeUrl,
-      });
-
-      const driverInfo = {
-        Name: `${firstName} ${middleName} ${lastName}`,
-        TricycleNumber: tricycleNumber,
-        inQueue: false,
-      };
-
-      transaction.set(driversInBarangayRef, driverInfo);
-    });
+    // Save the driver data using the user ID
+    await saveDriverToFirestore(userRecord.uid, {
+      email,
+      firstName,
+      middleName,
+      lastName,
+      barangay,
+      tricycleNumber,
+      phoneNumber,
+      plateImageUrl,
+      plateNumberText,
+      profileImageUrl,
+    }, firestore, bucket);
 
     return NextResponse.json({ success: "Registration successful." });
+
   } catch (error) {
-    // Provide more specific error messages based on error code
+    // Handle errors
     let errorMessage = "Registration failed. Please try again later.";
 
     if (error instanceof Error && 'code' in error) {
-      // Specific error handling for authentication errors
       if (error.code === 'auth/email-already-exists') {
         errorMessage = "This email address is already in use.";
       } else if (error.code === 'auth/invalid-email') {
@@ -91,27 +69,90 @@ export async function POST(request: Request) {
   }
 }
 
-const generateQRCode = async (uid: string, data: string, bucket: any) => {
-  const qrCodeUrl = await QRCode.toDataURL(data);
-  const qrCodeRef = bucket.file(`qrcodes/${uid}.png`);
-  const buffer = Buffer.from(qrCodeUrl.split(',')[1], 'base64'); // Extract base64 part of the URL
-  await qrCodeRef.save(buffer, { contentType: 'image/png' });
-  return `https://storage.googleapis.com/${bucket.name}/qrcodes/${uid}.png`;
-};
-
-// Upload the file to the bucket
+// Function to upload file to Firebase Storage
 const uploadFile = async (file: string, path: string, bucket: any) => {
   const fileRef = bucket.file(path);
   const buffer = Buffer.from(file.split(",")[1], 'base64'); // Extract base64 part of the image file
   await fileRef.save(buffer, { contentType: 'image/png' });
-  return `https://storage.googleapis.com/${bucket.name}/${path}`;
+
+  // Get the download URL for the file
+  const [url] = await fileRef.getSignedUrl({
+    action: 'read',
+    expires: '03-01-2500', // Set a long expiration date for public access
+  });
+
+  return url;
 };
 
-// Upload the default profile image from the public directory and rename it to the user's uid
-const uploadProfileImage = async (bucket: any, uid: string) => {
-  const fileRef = bucket.file(`profile_images/${uid}.png`); // Store the profile image under profile_images folder
-  const filePath = path.join(process.cwd(), 'public', 'profile_user.png'); // Path to the default profile image
-  const buffer = readFileSync(filePath); // Read the file from the public directory
+// Upload default profile image if none is provided
+const uploadDefaultProfileImage = async (uid: string, bucket: any) => {
+  const fileRef = bucket.file(`profile_images/${uid}.png`);
+  const filePath = path.join(process.cwd(), 'public', 'profile_user.png');
+  const buffer = readFileSync(filePath);
   await fileRef.save(buffer, { contentType: 'image/png' });
-  return `https://storage.googleapis.com/${bucket.name}/profile_images/${uid}.png`;
+
+  const [url] = await fileRef.getSignedUrl({
+    action: 'read',
+    expires: '03-01-2500',
+  });
+
+  return url;
+};
+
+// Save driver data to Firestore with profile and plate images URLs
+const saveDriverToFirestore = async (uid: string, driverData: any, firestore: any, bucket: any) => {
+  const { email, firstName, middleName, lastName, barangay, tricycleNumber, phoneNumber, plateNumberText, plateImageUrl, profileImageUrl } = driverData;
+
+  const qrData = `uid: ${uid}`;
+  const encryptedQrCode = encrypt(qrData, SECRET_KEY);
+  const qrCodeUrl = await generateQRCode(uid, encryptedQrCode, bucket);
+
+  await firestore.runTransaction(async (transaction: any) => {
+    const userRef = firestore.collection('users').doc(uid);
+    const barangayRef = firestore.collection('barangays').doc(barangay);
+    const driversInBarangayRef = barangayRef.collection('drivers').doc(uid);
+
+    transaction.set(userRef, {
+      uid,
+      name: `${firstName} ${middleName} ${lastName}`,
+      barangay,
+      tricycleNumber,
+      email,
+      phoneNumber,
+      plateNumber: plateImageUrl,
+      plateNumberText,
+      profileImage: profileImageUrl,
+      balance: 100,
+      role: 'Driver',
+      inQueue: false,
+    });
+
+    transaction.set(driversInBarangayRef, {
+      uid,
+      name: `${firstName} ${middleName} ${lastName}`,
+      tricycleNumber,
+      inQueue: false,
+    });
+
+    // Save QR code URL to a separate collection
+    const qrCodeRef = firestore.collection('qr_code').doc(uid);
+    transaction.set(qrCodeRef, {
+      qrCodeUrl,
+    });
+  });
+};
+
+// Generate a QR code and upload to Firebase Storage
+const generateQRCode = async (uid: string, data: string, bucket: any) => {
+  const qrCodeUrl = await QRCode.toDataURL(data);
+  const qrCodeRef = bucket.file(`qrcodes/${uid}.png`);
+  const buffer = Buffer.from(qrCodeUrl.split(',')[1], 'base64');
+  await qrCodeRef.save(buffer, { contentType: 'image/png' });
+
+  const [url] = await qrCodeRef.getSignedUrl({
+    action: 'read',
+    expires: '03-01-2500',
+  });
+
+  return url;
 };
