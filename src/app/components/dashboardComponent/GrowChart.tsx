@@ -31,8 +31,8 @@ const GrowthChart = () => {
           .map(([date, amount]) => ({ name: date, amount })) // Create an array of objects with date and summed amount
           .sort((a, b) => new Date(b.name).getTime() - new Date(a.name).getTime()); // Sort by date descending
 
-        // Keep only the latest 5 days
-        setData(sortedData.slice(0, 5));
+        // Keep only the latest 7 days
+        setData(sortedData.slice(0, 7));
         setLoading(false);
       } catch (err: any) {
         setError(err.message);

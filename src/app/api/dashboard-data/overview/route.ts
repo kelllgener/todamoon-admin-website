@@ -7,19 +7,38 @@ export async function GET() {
   const firestore = adminApp.firestore();
 
   try {
-    // Fetch terminal fee
-    const feeRef = firestore.collection('dashboard-counts').doc('terminal-fee');
-    const feeSnap = await feeRef.get();
+    // Terminal fee document IDs
+    const terminalFees = [
+      'barandal-terminal-fee',
+      'bubuyan-terminal-fee',
+      'bunggo-terminal-fee',
+      'burol-terminal-fee',
+      'kay-anlog-terminal-fee',
+      'prinza-terminal-fee',
+      'punta-terminal-fee'
+    ];
 
-    // Retrieve fee and lastUpdated fields
-    const fee = feeSnap.exists ? feeSnap.data()?.fee || '₱0.00' : '₱0.00';
+    // Initialize an object to store all terminal fees data
+    const feeData: Record<string, { fee: string; lastUpdated: string }> = {};
 
-    // Handle Firestore Timestamp for terminal fee
-    const lastUpdated = feeSnap.exists && feeSnap.data()?.lastUpdated 
-      ? (feeSnap.data()?.lastUpdated instanceof Timestamp
-        ? feeSnap.data()?.lastUpdated.toDate().toISOString() // Convert Timestamp to ISO string
-        : 'Not available') 
-      : 'Not available';
+    // Fetch all terminal fee documents
+    for (const feeId of terminalFees) {
+      const feeRef = firestore.collection('dashboard-counts').doc(feeId);
+      const feeSnap = await feeRef.get();
+      
+      // If the document exists, store its data
+      if (feeSnap.exists) {
+        const data = feeSnap.data();
+        feeData[feeId] = {
+          fee: data?.fee || '₱0.00',
+          lastUpdated: data?.lastUpdated instanceof Timestamp
+            ? data.lastUpdated.toDate().toISOString()
+            : 'Not available'
+        };
+      } else {
+        feeData[feeId] = { fee: '₱0.00', lastUpdated: 'Not available' };
+      }
+    }
 
     // Fetch counts for drivers and passengers
     const driversSnap = await firestore.collection('users').where('role', '==', 'Driver').get();
@@ -31,20 +50,17 @@ export async function GET() {
     // Get the current timestamp
     const currentTimestamp = Timestamp.now();
 
-    // Retrieve the current counts and last updated timestamps from Firestore
+    // Fetch and retrieve passenger counts document data
     const passengerCountsRef = firestore.collection('dashboard-counts').doc('passenger-counts');
     const passengerCountsSnap = await passengerCountsRef.get();
-    const currentPassengerCount = passengerCountsSnap.exists ? passengerCountsSnap.data()?.['current-passenger-count'] : 0;
-    const passengerLastUpdated = passengerCountsSnap.exists && passengerCountsSnap.data()?.passengerLastUpdated 
-      ? passengerCountsSnap.data()?.passengerLastUpdated 
-      : 'Not available';
+    const currentPassengerCount = passengerCountsSnap.exists ? passengerCountsSnap.data()?.['current-passenger-count'] || 0 : 0;
+    const passengerLastUpdated = passengerCountsSnap.exists ? passengerCountsSnap.data()?.passengerLastUpdated || 'Not available' : 'Not available';
 
+    // Fetch and retrieve driver counts document data
     const driverCountsRef = firestore.collection('dashboard-counts').doc('driver-counts');
     const driverCountsSnap = await driverCountsRef.get();
-    const currentDriverCount = driverCountsSnap.exists ? driverCountsSnap.data()?.['current-driver-count'] : 0;
-    const driverLastUpdated = driverCountsSnap.exists && driverCountsSnap.data()?.driverLastUpdated
-      ? driverCountsSnap.data()?.driverLastUpdated
-      : 'Not available';
+    const currentDriverCount = driverCountsSnap.exists ? driverCountsSnap.data()?.['current-driver-count'] || 0 : 0;
+    const driverLastUpdated = driverCountsSnap.exists ? driverCountsSnap.data()?.driverLastUpdated || 'Not available' : 'Not available';
 
     // Update Firestore only if counts have changed
     if (passengersCount !== currentPassengerCount) {
@@ -62,12 +78,11 @@ export async function GET() {
     }
 
     return NextResponse.json({
-      fee,
-      lastUpdated, // Terminal fee last updated
-      driversCount,
-      driverLastUpdated, // Driver last updated timestamp
-      passengersCount,
-      passengerLastUpdated, // Passenger last updated timestamp
+      feeData,  // Returns all terminal fees data
+      driversCount,  // Current drivers count
+      driverLastUpdated,  // Driver counts last updated
+      passengersCount,  // Current passengers count
+      passengerLastUpdated,  // Passenger counts last updated
     });
   } catch (error) {
     console.error('Error fetching data:', error);

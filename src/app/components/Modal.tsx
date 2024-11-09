@@ -1,4 +1,5 @@
 import React from "react";
+import Image from "next/image";
 
 interface ModalProps {
   imageUrl: string;
@@ -30,10 +31,13 @@ const Modal: React.FC<ModalProps> = ({ imageUrl, onClose }) => {
         >
           &times;
         </button>
-        <img
+        <Image
           src={imageUrl}
           alt="Large view"
-          className="max-w-full max-h-screen object-contain"
+          layout="responsive"
+          objectFit="contain"
+          width={800} // Adjust the width as needed
+          height={600} // Adjust the height as needed
         />
       </div>
     </div>

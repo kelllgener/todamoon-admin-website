@@ -22,8 +22,10 @@ const MAX_PAGE_BUTTONS = 4;
 
 const BillingRecordsDatabase = () => {
   const [records, setRecords] = useState<BillingRecords[]>([]);
+  const [filteredRecords, setFilteredRecords] = useState<BillingRecords[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
@@ -36,6 +38,7 @@ const BillingRecordsDatabase = () => {
           setError(data.error);
         } else {
           setRecords(data.data);
+          setFilteredRecords(data.data); // Initialize filtered records
         }
       } catch (error) {
         setError("Failed to fetch records.");
@@ -62,12 +65,19 @@ const BillingRecordsDatabase = () => {
 
       if (response.ok) {
         setRecords(records.filter((record) => record.recordId !== recordId));
+        setFilteredRecords(
+          filteredRecords.filter((record) => record.recordId !== recordId)
+        );
         Swal.fire("Deleted!", "The record has been deleted.", "success");
       } else {
         Swal.fire("Error!", "Failed to delete the record.", "error");
       }
     } catch (error) {
-      Swal.fire("Error!", "An error occurred while deleting the record.", "error");
+      Swal.fire(
+        "Error!",
+        "An error occurred while deleting the record.",
+        "error"
+      );
     } finally {
       setLoading(false);
     }
@@ -90,6 +100,17 @@ const BillingRecordsDatabase = () => {
     });
   };
 
+  const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const query = event.target.value.toLowerCase();
+    setSearchQuery(query);
+
+    const filtered = records.filter((record) =>
+      record.name.toLowerCase().includes(query)
+    );
+    setFilteredRecords(filtered);
+    setCurrentPage(1); // Reset to first page after filtering
+  };
+
   if (loading) {
     return <Loading />;
   }
@@ -98,34 +119,61 @@ const BillingRecordsDatabase = () => {
     return <p>{error}</p>;
   }
 
-  const formatTimestamp = (timestamp: { _seconds: number; _nanoseconds: number }) => {
+  const formatTimestamp = (timestamp: {
+    _seconds: number;
+    _nanoseconds: number;
+  }) => {
     const date = new Date(timestamp._seconds * 1000);
     return date.toLocaleString();
   };
 
-  const totalPages = Math.ceil(records.length / ITEMS_PER_PAGE);
+  const totalPages = Math.ceil(filteredRecords.length / ITEMS_PER_PAGE);
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
   const endIndex = startIndex + ITEMS_PER_PAGE;
-  const currentRecords = records.slice(startIndex, endIndex);
+  const currentRecords = filteredRecords.slice(startIndex, endIndex);
 
   const startPage = Math.max(1, currentPage - Math.floor(MAX_PAGE_BUTTONS / 2));
   const endPage = Math.min(totalPages, startPage + MAX_PAGE_BUTTONS - 1);
-  const pageButtons = Array.from({ length: endPage - startPage + 1 }, (_, i) => startPage + i);
+  const pageButtons = Array.from(
+    { length: endPage - startPage + 1 },
+    (_, i) => startPage + i
+  );
 
   return (
-    <div className="">
+    <div>
+      <div className="flex mb-6 mt-1">
+        <label className="input input-sm input-bordered flex items-center gap-2">
+          <input
+            type="text"
+            className="grow"
+            placeholder="Search by name"
+            value={searchQuery}
+            onChange={handleSearchChange}
+          />
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 16 16"
+            fill="currentColor"
+            className="h-4 w-4 opacity-70"
+          >
+            <path
+              fillRule="evenodd"
+              d="M9.965 11.026a5 5 0 1 1 1.06-1.06l2.755 2.754a.75.75 0 1 1-1.06 1.06l-2.755-2.754ZM10.5 7a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0Z"
+              clipRule="evenodd"
+            />
+          </svg>
+        </label>
+      </div>
       <div className="w-full md:w-auto">
         <table className="table table-xs table-zebra overflow-x-auto">
           <thead>
             <tr>
               <th>#</th>
               <th>Record ID</th>
-              <th>Driver ID</th>
               <th>Name</th>
               <th>Description</th>
               <th>Amount</th>
               <th>Timestamp</th>
-              <th>Action</th>
             </tr>
           </thead>
           <tbody>
@@ -133,21 +181,10 @@ const BillingRecordsDatabase = () => {
               <tr key={record.recordId}>
                 <td>{startIndex + index + 1}</td>
                 <td>{record.recordId}</td>
-                <td>{record.uid}</td>
                 <td>{record.name}</td>
                 <td>{record.description}</td>
                 <td>{record.amount}</td>
                 <td>{formatTimestamp(record.timestamp)}</td>
-                <td className="whitespace-nowrap">
-                  <ActionButtons
-                    uid={record.recordId}
-                    className="btn-error"
-                    color="text-red-700"
-                    Icon={TrashIcon}
-                    title="delete"
-                    onClick={() => handleDeleteClick(record.recordId)}
-                  />
-                </td>
               </tr>
             ))}
           </tbody>
@@ -165,7 +202,9 @@ const BillingRecordsDatabase = () => {
           {pageButtons.map((page) => (
             <button
               key={page}
-              className={`btn btn-square btn-sm ${currentPage === page ? "btn-active" : ""}`}
+              className={`btn btn-square btn-sm ${
+                currentPage === page ? "btn-active" : ""
+              }`}
               onClick={() => setCurrentPage(page)}
             >
               {page}
@@ -174,7 +213,9 @@ const BillingRecordsDatabase = () => {
           <button
             className="btn btn-square btn-sm"
             disabled={currentPage === totalPages}
-            onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+            onClick={() =>
+              setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+            }
           >
             »
           </button>

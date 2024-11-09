@@ -4,11 +4,13 @@ import QRCode from 'qrcode';
 import { Buffer } from 'buffer';
 import { readFileSync } from 'fs';
 import path from 'path';
-import { encrypt } from "@/app/utils/crypto";
+import encrypt from "@/app/utils/crypto";
 
 const SECRET_KEY = "Todamoon_drivers";
 
 export async function POST(request: Request) {
+  const startOperationTime = process.hrtime();
+  
   const { email, password, firstName, middleName, lastName, barangay, tricycleNumber, phoneNumber, plateImage, plateNumberText, profileImage } = await request.json();
 
   try {
@@ -16,26 +18,24 @@ export async function POST(request: Request) {
     const firestore = adminApp.firestore();
     const bucket = adminApp.storage().bucket(); // Automatically use the default storage bucket
 
-    // First upload plate image, then profile image, and save URLs
-    let plateImageUrl = '';
-    let profileImageUrl = '';
-
-    // Check if plate image is provided
-    plateImageUrl = plateImage 
-      ? await uploadFile(plateImage, `plate_images/temp_${Date.now()}.png`, bucket)
-      : null; // Or assign a default value if necessary
-
-    // Proceed with profile image upload if provided, else use default or skip
-    profileImageUrl = profileImage 
-      ? await uploadFile(profileImage, `profile_images/temp_${Date.now()}.png`, bucket)
-      : await uploadDefaultProfileImage('temp', bucket); // Or skip this step if not necessary
-
     // Create the user only after successful uploads and Firestore transaction
     const auth = adminApp.auth();
     const userRecord = await auth.createUser({
       email,
       password,
     });
+
+    // First upload plate image, then profile image, and save URLs
+    let plateImageUrl = '';
+    let profileImageUrl = '';
+
+    plateImageUrl = plateImage
+      ? await uploadFile(plateImage, `plate_images/${userRecord.uid}.png`, bucket)
+      : null; // Or assign a default value if necessary
+
+    profileImageUrl = profileImage
+      ? await uploadFile(profileImage, `profile_images/${userRecord.uid}.png`, bucket)
+      : await uploadDefaultProfileImage(userRecord.uid, bucket); // Or skip this step if not necessary
 
     // Save the driver data using the user ID
     await saveDriverToFirestore(userRecord.uid, {
@@ -51,7 +51,12 @@ export async function POST(request: Request) {
       profileImageUrl,
     }, firestore, bucket);
 
+    const endOperationTime = process.hrtime(startOperationTime);
+    const latencyTimeMs = (endOperationTime[0] * 1000) + (endOperationTime[1] / 1_000_000);
+    console.log(`Total latency for every process: ${latencyTimeMs.toFixed(3)} ms`);
+
     return NextResponse.json({ success: "Registration successful." });
+    
 
   } catch (error) {
     // Handle errors
@@ -140,6 +145,7 @@ const saveDriverToFirestore = async (uid: string, driverData: any, firestore: an
       qrCodeUrl,
     });
   });
+
 };
 
 // Generate a QR code and upload to Firebase Storage

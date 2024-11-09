@@ -312,7 +312,6 @@ const DriverRegistrationForm: React.FC = () => {
                 value={phoneNumber}
                 onChange={handlePhoneChange}
                 maxLength={11}
-                required
               />
             </div>
 

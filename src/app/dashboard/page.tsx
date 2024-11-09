@@ -40,17 +40,12 @@ const Dashboard = () => {
           userRole={userData?.role || "GUEST"} // Pass the user role here
         />
         <main className="flex flex-col flex-grow p-6 space-y-6">
-          {/* Grid setup for 2 top items and RecentActivity at the bottom */}
           <div className="grid grid-cols-1 lg:grid-cols-3 grid-rows-[auto,auto,1fr] gap-6 h-full">
-            {/* Overview and GrowChart on the top row */}
             <div className="lg:col-span-1">
               <Overview />
             </div>
             <div className="lg:col-span-2">
               <GrowChart />
-            </div>
-            {/* Recent Activity taking full bottom row */}
-            <div className="lg:col-span-3 row-span-1">
               <RecentActivity />
             </div>
           </div>

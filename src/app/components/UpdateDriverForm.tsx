@@ -148,7 +148,6 @@ const UpdateDriverForm = () => {
               value={editUser?.phoneNumber || ""}
               onChange={handleEditChange}
               maxLength={11}
-              required
             />
           </div>
         </div>

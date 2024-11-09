@@ -42,11 +42,7 @@ const ActivityTable = ({ barangay }: ActivityTableProps) => {
       }
     };
 
-    fetchData();
-    const interval = setInterval(fetchData, 10000); // Poll every 10 seconds
-
-    // Cleanup interval on unmount
-    return () => clearInterval(interval);
+    fetchData(); // Fetch data once when component mounts
   }, [barangay]);
 
   if (loading) {

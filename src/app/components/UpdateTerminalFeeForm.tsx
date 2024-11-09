@@ -4,31 +4,32 @@ import { doc, getDoc, updateDoc, Timestamp } from "firebase/firestore";
 import Loading from "../components/Loading"; // Import the Loading component
 
 const UpdateTerminalFee = () => {
-  const [currentFee, setCurrentFee] = useState(""); // Use this state if you need to display the current fee, but will not fetch it
+  const [currentFee, setCurrentFee] = useState(""); // For displaying the current fee
   const [amount, setAmount] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState<boolean>(false); // Add loading state
+  const [selectedBarangay, setSelectedBarangay] = useState("");
 
   useEffect(() => {
-    let fetchCurrentFee = async () => {
-      try {
-        const docRef = doc(db, "dashboard-counts", "terminal-fee");
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          setCurrentFee(docSnap.data().fee || ""); // Adjust 'fee' to match your document field
-        } else {
-          setError("Current fee data not found.");
+    if (selectedBarangay) {
+      const fetchCurrentFee = async () => {
+        try {
+          const docRef = doc(db, "dashboard-counts", selectedBarangay);
+          const docSnap = await getDoc(docRef);
+          if (docSnap.exists()) {
+            setCurrentFee(docSnap.data().fee || ""); // Adjust 'fee' to match your document field
+          } else {
+            setError("Current fee data not found.");
+          }
+        } catch (err) {
+          console.error("Error fetching current fee:", err);
+          setError("An error occurred while fetching the current fee.");
         }
-        await fetchCurrentFee(); // Fetch the updated fee after updating
-      } catch (err) {
-        console.error("Error fetching current fee:", err);
-        setError("An error occurred while fetching the current fee.");
-      }
-    };
-
-    fetchCurrentFee();
-  }, []);
+      };
+      fetchCurrentFee();
+    }
+  }, [selectedBarangay]);
 
   const handleFormSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -36,19 +37,21 @@ const UpdateTerminalFee = () => {
     setSuccess("");
     setLoading(true); // Set loading to true when registration starts
 
-    if (!amount) {
-      setError("Please fill in the new fee amount.");
+    if (!amount || !selectedBarangay) {
+      setError("Please fill in the new fee amount and select a barangay.");
+      setLoading(false);
       return;
     }
 
     const newFee = parseFloat(amount);
     if (newFee <= 0) {
       setError("Fee must be greater than zero.");
+      setLoading(false);
       return;
     }
 
     try {
-      const docRef = doc(db, "dashboard-counts", "terminal-fee");
+      const docRef = doc(db, "dashboard-counts", selectedBarangay);
 
       // Update the document with the new fee and current timestamp
       await updateDoc(docRef, {
@@ -90,6 +93,26 @@ const UpdateTerminalFee = () => {
             TODAMOON Terminal Fee{" "}
             <span className="badge badge-success">in PESO</span>
           </h2>
+
+          <div>
+            <select
+              className="select select-sm select-bordered w-full"
+              id="barangay"
+              name="barangay"
+              value={selectedBarangay}
+              onChange={(e) => setSelectedBarangay(e.target.value)}
+              required
+            >
+              <option value="">Select Barangay</option>
+              <option value="barandal-terminal-fee">Barandal</option>
+              <option value="bubuyan-terminal-fee">Bubuyan</option>
+              <option value="bunggo-terminal-fee">Bunggo</option>
+              <option value="burol-terminal-fee">Burol</option>
+              <option value="kay-anlog-terminal-fee">Kay-anlog</option>
+              <option value="prinza-terminal-fee">Prinza</option>
+              <option value="punta-terminal-fee">Punta</option>
+            </select>
+          </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             <div>

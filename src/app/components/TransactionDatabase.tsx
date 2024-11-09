@@ -142,11 +142,10 @@ const TransactionDatabase = () => {
             <th>Action</th>
             <th>Barangay</th>
             <th>Timestamp</th>
-            <th>Action</th>
           </tr>
         </thead>
         <tbody>
-          {currentTransactions.map((transaction, index) => (
+          {/* {currentTransactions.map((transaction, index) => (
             <tr key={transaction.transactionId}>
               <td>{startIndex + index + 1}</td>
               <td>{transaction.transactionId}</td>
@@ -156,18 +155,8 @@ const TransactionDatabase = () => {
               <td>{transaction.action}</td>
               <td>{transaction.barangay}</td>
               <td>{formatTimestamp(transaction.timestamp)}</td>
-              <td className="whitespace-nowrap">
-                <ActionButtons
-                  uid={transaction.transactionId}
-                  className="btn-error"
-                  color="text-red-700"
-                  Icon={TrashIcon}
-                  title="delete"
-                  onClick={() => handleDeleteClick(transaction.transactionId)}
-                />
-              </td>
             </tr>
-          ))}
+          ))} */}
         </tbody>
       </table>
       <div className="flex justify-start mt-12">

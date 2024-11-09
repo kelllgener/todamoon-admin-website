@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import Swal from "sweetalert2";
 import Loading from "./Loading";
 import ActionButtons from "./ActionButtons";
@@ -15,18 +16,21 @@ interface User {
   balance: number;
   role: string;
   tricycleNumber: string;
+  plateNumberText: string;
   profileImage?: string;
   plateNumber?: string;
+  qrCodeUrl?: string;
 }
 
 const ITEMS_PER_PAGE = 10;
-const MAX_PAGE_BUTTONS = 4;
+const MAX_PAGE_BUTTONS = 4; // Maximum page buttons to display
 
 const DriverDatabase = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [filter, setFilter] = useState(""); // Add filter state
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const router = useRouter();
 
@@ -39,7 +43,19 @@ const DriverDatabase = () => {
         if (data.error) {
           setError(data.error);
         } else {
-          setUsers(data.data);
+          const usersWithQRCode = await Promise.all(
+            data.data.map(async (user: User) => {
+              const qrResponse = await fetch(
+                `/api/Driver/getQrData?uid=${user.uid}`
+              );
+              const qrData = await qrResponse.json();
+              return {
+                ...user,
+                qrCodeUrl: qrData.data.qrCodeUrl,
+              };
+            })
+          );
+          setUsers(usersWithQRCode);
         }
       } catch (error) {
         setError("Failed to fetch users.");
@@ -118,11 +134,21 @@ const DriverDatabase = () => {
     return <p>{error}</p>;
   }
 
-  const totalPages = Math.ceil(users.length / ITEMS_PER_PAGE);
+  // Filter users based on name, email, or barangay
+  const filteredUsers = users.filter((user) => {
+    return (
+      user.name.toLowerCase().includes(filter.toLowerCase()) ||
+      user.email.toLowerCase().includes(filter.toLowerCase()) ||
+      user.barangay.toLowerCase().includes(filter.toLowerCase())
+    );
+  });
+
+  const totalPages = Math.ceil(filteredUsers.length / ITEMS_PER_PAGE);
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
   const endIndex = startIndex + ITEMS_PER_PAGE;
-  const currentUsers = users.slice(startIndex, endIndex);
+  const currentUsers = filteredUsers.slice(startIndex, endIndex);
 
+  // Calculate page button range
   const startPage = Math.max(1, currentPage - Math.floor(MAX_PAGE_BUTTONS / 2));
   const endPage = Math.min(totalPages, startPage + MAX_PAGE_BUTTONS - 1);
   const pageButtons = Array.from(
@@ -131,22 +157,44 @@ const DriverDatabase = () => {
   );
 
   return (
-    <div className="">
+    <>
+      <div className="flex mb-6 mt-1">
+        <label className="input input-sm input-bordered flex items-center gap-2">
+          <input
+            type="text"
+            className="grow"
+            placeholder="Search by name, email, or barangay"
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)} // Update filter state
+          />
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 16 16"
+            fill="currentColor"
+            className="h-4 w-4 opacity-70"
+          >
+            <path
+              fillRule="evenodd"
+              d="M9.965 11.026a5 5 0 1 1 1.06-1.06l2.755 2.754a.75.75 0 1 1-1.06 1.06l-2.755-2.754ZM10.5 7a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0Z"
+              clipRule="evenodd"
+            />
+          </svg>
+        </label>
+      </div>
       <div className="overflow-x-auto">
         <table className="table table-xs table-zebra w-full min-w-full">
           <thead>
             <tr>
               <th>#</th>
               <th>UID</th>
-              <th>Profile</th>
               <th>Name</th>
               <th>Email</th>
               <th>Phone</th>
               <th>Barangay</th>
               <th>Balance</th>
-              <th>Role</th>
               <th>Tricycle Number</th>
-              <th>Plate Number</th>
+              <th>Plate Number (Text)</th>
+              <th>QR Code</th>
               <th>Action</th>
             </tr>
           </thead>
@@ -155,45 +203,22 @@ const DriverDatabase = () => {
               <tr key={user.uid}>
                 <td>{startIndex + index + 1}</td>
                 <td>{user.uid}</td>
-                <td>
-                  {user.profileImage ? (
-                    <img
-                      src={user.profileImage}
-                      alt="Profile"
-                      className="w-8 h-8 object-cover cursor-pointer rounded-full"
-                      onClick={() =>
-                        handleImageClick(
-                          user.profileImage || "/default-profile.png"
-                        )
-                      }
-                      style={{ maxWidth: "100%", height: "auto" }}
-                    />
-                  ) : (
-                    <span>No Image</span>
-                  )}
-                </td>
                 <td>{user.name}</td>
                 <td>{user.email}</td>
                 <td>{user.phoneNumber}</td>
                 <td>{user.barangay}</td>
                 <td>{user.balance}</td>
-                <td>{user.role}</td>
                 <td>{user.tricycleNumber}</td>
+                <td>{user.plateNumberText}</td>
                 <td>
-                  {user.plateNumber ? (
-                    <img
-                      src={user.plateNumber}
-                      alt="Plate"
-                      className="w-8 h-8 object-cover cursor-pointer"
-                      onClick={() =>
-                        handleImageClick(
-                          user.plateNumber || "/default-plate.png"
-                        )
-                      }
-                      style={{ maxWidth: "100%", height: "auto" }}
+                  {user.qrCodeUrl && (
+                    <Image
+                      src={user.qrCodeUrl || ""}
+                      alt="QR Code"
+                      width={32}
+                      height={32}
+                      onClick={() => handleImageClick(user.qrCodeUrl || "")}
                     />
-                  ) : (
-                    <span>No Image</span>
                   )}
                 </td>
                 <td className="whitespace-nowrap">
@@ -251,7 +276,7 @@ const DriverDatabase = () => {
         </div>
       </div>
       {selectedImage && <Modal imageUrl={selectedImage} onClose={closeModal} />}
-    </div>
+    </>
   );
 };
 
