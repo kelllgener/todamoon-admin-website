@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import Swal from "sweetalert2";
 import Loading from "./Loading";
-import ActionButtons from "./ActionButtons";
-import { TrashIcon } from "@heroicons/react/24/outline";
+import ExportToExcelButton from "./ExportExcelButton";
+import ExportToPDFButtonForBilling from "./ExportPDFButtonForBilling";
 
 interface BillingRecords {
   recordId: string;
@@ -119,13 +119,38 @@ const BillingRecordsDatabase = () => {
     return <p>{error}</p>;
   }
 
-  const formatTimestamp = (timestamp: {
-    _seconds: number;
-    _nanoseconds: number;
-  }) => {
-    const date = new Date(timestamp._seconds * 1000);
-    return date.toLocaleString();
+// ...existing code...
+  const formatTimestamp = (timestamp: any) => {
+    if (!timestamp) return "";
+    // Firestore Timestamp instance with toDate()
+    if (typeof (timestamp as any).toDate === "function") {
+      try {
+        return (timestamp as any).toDate().toLocaleString();
+      } catch {
+        return "";
+      }
+    }
+    // Serialized Firestore timestamp object { _seconds, _nanoseconds }
+    if (typeof timestamp === "object" && "_seconds" in timestamp) {
+      const secs = Number((timestamp as any)._seconds);
+      if (!isNaN(secs)) {
+        return new Date(secs * 1000).toLocaleString();
+      }
+      return "";
+    }
+    // Numeric seconds timestamp
+    if (typeof timestamp === "number") {
+      return new Date(timestamp * 1000).toLocaleString();
+    }
+    // ISO string or Date-like
+    const date = new Date(timestamp);
+    if (!isNaN(date.getTime())) {
+      return date.toLocaleString();
+    }
+    // Fallback to string
+    return String(timestamp);
   };
+// ...existing code...
 
   const totalPages = Math.ceil(filteredRecords.length / ITEMS_PER_PAGE);
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
@@ -146,7 +171,7 @@ const BillingRecordsDatabase = () => {
           <input
             type="text"
             className="grow"
-            placeholder="Search by name"
+            placeholder="Search"
             value={searchQuery}
             onChange={handleSearchChange}
           />
@@ -163,6 +188,10 @@ const BillingRecordsDatabase = () => {
             />
           </svg>
         </label>
+        <div className="flex flex-row flex-grow justify-end">
+          <ExportToPDFButtonForBilling fileName="BillingRecords" />
+          <ExportToExcelButton collectionName="billing_records" fileName="BillingRecords" />
+        </div>
       </div>
       <div className="w-full md:w-auto">
         <table className="table table-xs table-zebra overflow-x-auto">

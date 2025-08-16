@@ -63,7 +63,7 @@ const GrowthChart = () => {
           <YAxis />
           <Tooltip />
           <Legend />
-          <Bar dataKey="amount" fill="#4ADE80" />
+          <Bar dataKey="amount" fill="#4ADE80" minPointSize={5} />
         </BarChart>
       </div>
     </div>

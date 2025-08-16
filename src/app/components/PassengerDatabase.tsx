@@ -4,6 +4,8 @@ import Loading from "./Loading";
 import ActionButtons from "./ActionButtons";
 import { TrashIcon } from "@heroicons/react/24/outline";
 import Modal from "./Modal";
+import ExportToExcelButtonForUsers from "./ExportExcelForUsers";
+import ExportToPDFButtonForPassenger from "./ExportPDFButtonForPassenger";
 
 interface User {
   uid: string;
@@ -68,7 +70,11 @@ const PassengerDatabase = () => {
       }
     } catch (error) {
       console.error("An error occurred:", error);
-      Swal.fire("Error!", "An error occurred while deleting the user.", "error");
+      Swal.fire(
+        "Error!",
+        "An error occurred while deleting the user.",
+        "error"
+      );
     } finally {
       setLoading(false);
     }
@@ -103,9 +109,10 @@ const PassengerDatabase = () => {
     setSearchQuery(e.target.value);
   };
 
-  const filteredUsers = users.filter((user) =>
-    user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    user.email.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredUsers = users.filter(
+    (user) =>
+      user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      user.email.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   if (loading) {
@@ -152,6 +159,26 @@ const PassengerDatabase = () => {
             />
           </svg>
         </label>
+        <div className="flex flex-row flex-grow justify-end">
+          <ExportToPDFButtonForPassenger
+            collectionName="users"
+            fileName="PassengerRecords"   
+            queryCondition={{
+              fieldPath: "role",
+              opStr: "==",
+              value: "Passenger",
+            }}
+          />
+          <ExportToExcelButtonForUsers
+            collectionName="users"
+            fileName="PassengerRecords"
+            queryCondition={{
+              fieldPath: "role",
+              opStr: "==",
+              value: "Passenger",
+            }}
+          />
+        </div>
       </div>
       <div className="overflow-x-auto">
         <table className="table table-xs table-zebra w-full">
@@ -218,7 +245,7 @@ const PassengerDatabase = () => {
         </div>
       </div>
       {selectedImage && <Modal imageUrl={selectedImage} onClose={closeModal} />}
-    </div>
+    </div>  
   );
 };
 

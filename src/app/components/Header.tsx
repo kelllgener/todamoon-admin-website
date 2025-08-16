@@ -82,9 +82,10 @@ const Header: React.FC<HeaderProps> = ({
       <div className="flex flex-row items-center space-x-4">
         {/* DateTimeUpdater - Hidden on small screens */}
         <h3 className="text-sm text-gray-900 hidden sm:block">
-          <DateTimeUpdater />
+          <DateTimeUpdater /> 
         </h3>
-
+        <h1>|</h1>
+      
         {/* Email and Dropdown */}
         <div className="dropdown dropdown-end">
           <div

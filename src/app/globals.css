@@ -2,3 +2,18 @@
 @tailwind components;
 @tailwind utilities;
 
+@media print {
+    @page {
+        margin: 0;
+      }
+    body * {
+        padding-left: 300px;
+        padding-right:300px;
+    }
+ 
+    button, .btn {
+        visibility: hidden;
+    }
+
+  }
+  

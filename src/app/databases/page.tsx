@@ -72,8 +72,8 @@ const Database = () => {
                   {tab === "Billing Records" && <BillingRecordsDatabase />}
                   {tab === "Drivers" && <DriverDatabase />}
                   {tab === "Passengers" && <PassengerDatabase />}
-                  {/* {tab === "Queueing Transactions" && <TransactionDatabase />} */}
-                  {tab === "Website Users" && <WebsiteUserDatabase />}
+                  {tab === "Queueing Transactions" && <TransactionDatabase />}
+                  {/* {tab === "Website Users" && <WebsiteUserDatabase />} */}
                 </div>
               </React.Fragment>
             ))}

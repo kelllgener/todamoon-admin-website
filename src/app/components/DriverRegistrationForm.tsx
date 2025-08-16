@@ -5,6 +5,7 @@ const DriverRegistrationForm: React.FC = () => {
   const [firstName, setFirstName] = useState("");
   const [middleName, setMiddleName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [licenseImage, setLicenseImage] = useState<File | null>(null);
   const [barangay, setBarangay] = useState("");
   const [tricycleNumber, setTricycleNumber] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
@@ -14,6 +15,8 @@ const DriverRegistrationForm: React.FC = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [plateImage, setPlateImage] = useState<File | null>(null);
   const [fileInputKey, setFileInputKey] = useState(0);
+  const [operatorName, setOperatorName] = useState("");
+
 
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -44,6 +47,13 @@ const DriverRegistrationForm: React.FC = () => {
     setFileInputKey((prevKey) => prevKey + 1);
   };
 
+  const handleLicenseFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setLicenseImage(file);
+    }
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -67,7 +77,17 @@ const DriverRegistrationForm: React.FC = () => {
     }
   };
 
+  const validatePassword = (password: string) => {
+    const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*?&]).{8,}$/;
+    return passwordRegex.test(password);
+  };
+
   const handleSubmit = async () => {
+    if (!validatePassword(password)) {
+      setError("Weak Password");
+      return;
+    }
+
     if (password !== confirmPassword) {
       setError("Passwords do not match.");
       return;
@@ -78,6 +98,9 @@ const DriverRegistrationForm: React.FC = () => {
     try {
       const plateImageBase64 = plateImage
         ? await convertFileToBase64(plateImage)
+        : null;
+      const licenseImageBase64 = licenseImage
+        ? await convertFileToBase64(licenseImage)
         : null;
 
       const response = await fetch("/api/Driver/registerDriver", {
@@ -96,6 +119,8 @@ const DriverRegistrationForm: React.FC = () => {
           plateNumberText,
           phoneNumber,
           plateImage: plateImageBase64,
+          licenseImage: licenseImageBase64,
+          operatorName,
         }),
       });
 
@@ -194,7 +219,7 @@ const DriverRegistrationForm: React.FC = () => {
                 onChange={(e) => setMiddleName(e.target.value)}
               />
             </div>
-            <div className="md:col-span-2">
+            <div className="md:col-span-1">
               <label className="label" htmlFor="lastname">
                 <span className="label-text">Lastname</span>
               </label>
@@ -208,7 +233,38 @@ const DriverRegistrationForm: React.FC = () => {
                 required
               />
             </div>
+
+            <div className="md:col-span-1">
+              <label className="label" htmlFor="licenseImage">
+                <span className="label-text">Driver's License (Image)</span>
+              </label>
+              <input
+                className="file-input file-input-sm file-input-bordered w-full"
+                id="licenseImage"
+                type="file"
+                accept="image/*"
+                onChange={handleLicenseFileChange}
+                required
+              />
+            </div>
           </div>
+
+          <div className="md:col-span-1 mb-6">
+            <label className="label" htmlFor="operatorName">
+              <span className="label-text">Operator's Name</span>
+            </label>
+            <input
+              className="input input-sm input-bordered w-full"
+              id="operatorName"
+              type="text"
+              placeholder="Operator's Name"
+              value={operatorName}
+              onChange={(e) => setOperatorName(e.target.value)}
+              
+            />
+          </div>
+
+
 
           <h3 className="text-lg font-semibold mb-4">Tricycle Information</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
@@ -246,7 +302,7 @@ const DriverRegistrationForm: React.FC = () => {
                 value={plateNumberText}
                 onChange={(e) => setPlateNumberText(e.target.value)}
                 required
-                maxLength={15} 
+                maxLength={15}
               />
             </div>
 
@@ -281,7 +337,6 @@ const DriverRegistrationForm: React.FC = () => {
                 onChange={handleFileChange}
               />
             </div>
-            
           </div>
 
           <h3 className="text-lg font-semibold mb-4">Account Details</h3>
@@ -320,7 +375,9 @@ const DriverRegistrationForm: React.FC = () => {
                 <span className="label-text">Password</span>
               </label>
               <input
-                className="input input-sm input-bordered w-full"
+                className={`input input-sm input-bordered w-full ${
+                  password && !validatePassword(password) ? "input-error" : ""
+                }`}
                 id="password"
                 type="password"
                 placeholder="Password"
@@ -328,7 +385,11 @@ const DriverRegistrationForm: React.FC = () => {
                 onChange={(e) => setPassword(e.target.value)}
                 required
               />
+              {password && !validatePassword(password) && (
+                <span className="text-red-500 text-xs">Weak Password</span>
+              )}
             </div>
+
             <div>
               <label className="label" htmlFor="confirmPassword">
                 <span className="label-text">Confirm Password</span>

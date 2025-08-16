@@ -4,8 +4,11 @@ import Swal from "sweetalert2";
 import Loading from "./Loading";
 import ActionButtons from "./ActionButtons";
 import { useRouter } from "next/navigation";
-import { TrashIcon, PencilSquareIcon } from "@heroicons/react/24/outline";
+import { TrashIcon, PencilSquareIcon, ArchiveBoxIcon } from "@heroicons/react/24/outline";
 import Modal from "./Modal";
+import ExportToExcelButtonForUsers from "./ExportExcelForUsers";
+import ExportToPDFButtonForDriver from "./ExportPDFButtonsForDriver";
+import ExportPDFButtonForHistory from "./ExportPDFButtonForHistory";
 
 interface User {
   uid: string;
@@ -20,6 +23,7 @@ interface User {
   profileImage?: string;
   plateNumber?: string;
   qrCodeUrl?: string;
+  operatorName: string;
 }
 
 const ITEMS_PER_PAGE = 10;
@@ -32,6 +36,8 @@ const DriverDatabase = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [filter, setFilter] = useState(""); // Add filter state
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [driverName, setDriverName] = useState("");
+  const [selectedBarangay, setSelectedBarangay] = useState("");
   const router = useRouter();
 
   useEffect(() => {
@@ -118,12 +124,16 @@ const DriverDatabase = () => {
     });
   };
 
-  const handleImageClick = (imageUrl: string) => {
+  const handleImageClick = (imageUrl: string, name: string, barangay: string) => {
     setSelectedImage(imageUrl);
+    setDriverName(name);
+    setSelectedBarangay(barangay);
   };
 
   const closeModal = () => {
     setSelectedImage(null);
+    setDriverName("");
+    setSelectedBarangay("");
   };
 
   if (loading) {
@@ -163,7 +173,7 @@ const DriverDatabase = () => {
           <input
             type="text"
             className="grow"
-            placeholder="Search by name, email, or barangay"
+            placeholder="Search"
             value={filter}
             onChange={(e) => setFilter(e.target.value)} // Update filter state
           />
@@ -180,14 +190,31 @@ const DriverDatabase = () => {
             />
           </svg>
         </label>
+        <div className="flex flex-row flex-grow justify-end">
+        <ExportToPDFButtonForDriver
+            collectionName="users"
+            fileName="DriverRecords"
+            queryCondition={{
+              fieldPath: "role",
+              opStr: "==",
+              value: "Driver",
+            }}
+          />
+          <ExportToExcelButtonForUsers
+            collectionName="users"
+            fileName="DriverRecords"
+            queryCondition={{ fieldPath: "role", opStr: "==", value: "Driver" }}
+          />
+        </div>
       </div>
       <div className="overflow-x-auto">
         <table className="table table-xs table-zebra w-full min-w-full">
           <thead>
             <tr>
               <th>#</th>
-              <th>UID</th>
-              <th>Name</th>
+              {/* <th>UID</th> */}
+              <th>Driver's Name</th>
+              <th>Operator's Name</th>
               <th>Email</th>
               <th>Phone</th>
               <th>Barangay</th>
@@ -202,8 +229,9 @@ const DriverDatabase = () => {
             {currentUsers.map((user, index) => (
               <tr key={user.uid}>
                 <td>{startIndex + index + 1}</td>
-                <td>{user.uid}</td>
+                {/* <td>{user.uid}</td> */}
                 <td>{user.name}</td>
+                <td>{user.operatorName}</td>
                 <td>{user.email}</td>
                 <td>{user.phoneNumber}</td>
                 <td>{user.barangay}</td>
@@ -217,11 +245,12 @@ const DriverDatabase = () => {
                       alt="QR Code"
                       width={32}
                       height={32}
-                      onClick={() => handleImageClick(user.qrCodeUrl || "")}
+                      onClick={() => handleImageClick(user.qrCodeUrl || "", user.name, user.barangay)}
                     />
                   )}
                 </td>
                 <td className="whitespace-nowrap">
+                <ExportPDFButtonForHistory userID={user.uid} userName={user.name} />
                   <ActionButtons
                     uid={user.uid}
                     className="btn-secondary"
@@ -275,7 +304,7 @@ const DriverDatabase = () => {
           </div>
         </div>
       </div>
-      {selectedImage && <Modal imageUrl={selectedImage} onClose={closeModal} />}
+      {selectedImage && <Modal name={driverName} imageUrl={selectedImage} barangay={selectedBarangay} onClose={closeModal} />}
     </>
   );
 };

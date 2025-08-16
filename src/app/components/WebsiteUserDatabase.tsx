@@ -4,6 +4,8 @@ import Loading from "./Loading";
 import ActionButtons from "./ActionButtons";
 import { TrashIcon, UserPlusIcon } from "@heroicons/react/24/outline";
 import Link from "next/link";
+import ExportToExcelButton from "./ExportExcelButton";
+import ExportToPDFButtonForWebsiteUser from "./ExportPDFButtonForWebsiteUser";
 
 interface User {
   uid: string;
@@ -76,7 +78,11 @@ const WebsiteUserDatabase = () => {
     } catch (error) {
       // Handle fetch error
       console.error("An error occurred:", error);
-      Swal.fire("Error!", "An error occurred while deleting the user.", "error");
+      Swal.fire(
+        "Error!",
+        "An error occurred while deleting the user.",
+        "error"
+      );
     } finally {
       setLoading(false);
     }
@@ -108,9 +114,10 @@ const WebsiteUserDatabase = () => {
   }
 
   // Filter users based on search query
-  const filteredUsers = users.filter((user) =>
-    user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    user.role.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredUsers = users.filter(
+    (user) =>
+      user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      user.role.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const totalPages = Math.ceil(filteredUsers.length / ITEMS_PER_PAGE);
@@ -133,7 +140,7 @@ const WebsiteUserDatabase = () => {
           <input
             type="text"
             className="grow"
-            placeholder="Search by email"
+            placeholder="Search"
             value={searchQuery} // Manage the value of the input
             onChange={(e) => setSearchQuery(e.target.value)} // Update search query
           />
@@ -151,8 +158,10 @@ const WebsiteUserDatabase = () => {
           </svg>
         </label>
         <div className="flex flex-row flex-grow justify-end">
+          <ExportToPDFButtonForWebsiteUser fileName="WebsiteUserRecords" collectionName="website-users" />
+          <ExportToExcelButton fileName="WebsiteUserRecords" collectionName="website-users" />
           <Link
-            className="flex flex-row btn btn-neutral btn-sm"
+            className="flex flex-row btn btn-neutral btn-sm ml-1"
             href={"/signup"}
           >
             <UserPlusIcon height={"20px"} /> Add User
